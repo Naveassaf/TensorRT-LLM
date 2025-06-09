@@ -723,16 +723,17 @@ class Linear(nn.Module):
                     _copy(self.input_scale, input_scale)
                     _copy(self.alpha, alpha)
 
-                    pre_quant_scale = load_weight_shard(
-                        weights[0]['pre_quant_scale'], self.tp_size,
-                        self.tp_rank, self.tp_mode, device)
-
                     # NOTE:Create this tensor in load_weights, since not all layer have this tensor and memory is not allocated for it (same as W4A16)
                     self.pre_quant_scale = Parameter(
                         torch.ones((self.in_features, ), dtype=torch.float16),
                         requires_grad=False).to(device=device)
 
-                    _copy(self.pre_quant_scale, pre_quant_scale)
+                    if 'pre_quant_scale' in weights[0]:
+                        sharded_pre_quant_scale = load_weight_shard(
+                            weights[0]['pre_quant_scale'], self.tp_size,
+                            self.tp_rank, self.tp_mode, device)
+
+                        _copy(self.pre_quant_scale, sharded_pre_quant_scale)
 
         elif weight_mode == WeightMode.FUSED_QKV_LINEAR:
             assert len(weights) == 3
